@@ -1,0 +1,2984 @@
+<!DOCTYPE html>
+<!-- saved from url=(0137)file:///private/var/folders/nq/wbrl52cn0jxddy7rbbcwvsp80000gn/T/remote-file-preview-5542C43C-D71D-454D-BC8C-3F5C3BE60A08/wizard_form.html -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロゴデザイン・ウィザードフォーム</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script type="text/javascript">
+        (function() {
+            emailjs.init("YOUR_USER_ID"); // EmailJSのユーザーIDを設定
+        })();
+    </script>
+    <style>
+      /*
+        ウィザード式フォーム。
+        サンプル画像を参考に、縦長レイアウトと左側のタイトルエリア、
+        上部の進捗インジケーター、ステップごとのフォームとナビゲーションボタンを配置しています。
+      */
+      :root {
+        /* ダーク基調の背景色 */
+        --bg-dark: #08211c;
+        /* 左側サイドバーの背景色をさらに暗くしてメインエリアと区別しやすくする */
+        --bg-main: #0e241e;
+        --bg-panel: #274c42;
+        /* アクティブカラー（プログレスのハイライト） */
+        --highlight: #c3d647; /* サンプルの黄緑に近い色 */
+        /* テキスト色 */
+        --text-light: #f3f8f7;
+        --text-muted: #aabfb9;
+        /* ボタン */
+        --btn-bg: #ffffff;
+        --btn-color: #204b40;
+        --btn-border: #204b40;
+        --clear-color: #f3f8f7;
+        --clear-border: #f3f8f7;
+      /* モーダル背景色・ボタン */
+      --modal-overlay: rgba(0, 0, 0, 0.6);
+      --modal-bg: #274c42;
+      --modal-border: #40685c;
+      --modal-btn-bg: #ffffff;
+      --modal-btn-color: #204b40;
+      --modal-btn-hover: #c3d647;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+      }
+
+      .wrapper {
+        display: flex;
+        flex-direction: row;
+        min-height: 100vh;
+      }
+
+      /* 左側の縦書きエリア */
+      .sidebar {
+        background-color: var(--bg-main);
+        width: 35%;
+        padding: 2rem 1rem;
+        box-sizing: border-box;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        flex-direction: column;
+      }
+      .sidebar h1 {
+        margin: 0;
+        line-height: 1.2;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-light);
+        white-space: pre-line;
+      }
+
+      /* 右側のメインコンテンツ */
+      .main {
+        flex: 1;
+        background-color: var(--bg-panel);
+        /* フォームの外側に余裕を持たせるためパディングを増やす */
+        /* ユーザー要望: 全体的により広い余白を確保。上部・左右にゆとりを持たせる */
+        padding: 3rem 3rem 5rem;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* 進捗インジケーター */
+      .progress {
+        /* ステップバーの下に十分なスペースを確保 */
+        margin-bottom: 2.5rem;
+        /* ステップバー自体をフォーム幅の70%に設定し中央に配置 */
+        width: 70%;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .progress ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: relative;
+        width: 100%;
+      }
+      .progress ul::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--text-muted);
+        transform: translateY(-50%);
+      }
+      .progress li {
+        /* インジケーターの丸を小さめにして視認性を保つ */
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--bg-panel);
+        border: 2px solid var(--text-muted);
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .progress li.active {
+        background: var(--highlight);
+        border-color: var(--highlight);
+      }
+
+      /* ステップコンテンツ */
+      .step {
+        display: none;
+        flex-direction: column;
+        max-width: 600px;
+      }
+      .step.active {
+        display: flex;
+      }
+      .step h2 {
+        margin-top: 0;
+        /* ステップ見出しの下にゆとりを持たせる */
+        margin-bottom: 2.2rem;
+        font-size: 1.3rem;
+        font-weight: 600;
+        text-align: left;
+      }
+
+      .field {
+        /* 各フォームフィールドの下にゆとりを持たせる */
+        margin-bottom: 1.5rem;
+      }
+      .field label {
+        display: block;
+        margin-bottom: 0.3rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+      }
+      .field input[type="text"],
+      .field input[type="email"],
+      .field input[type="tel"],
+      .field textarea,
+      .field select {
+        width: 100%;
+        padding: 0.8rem 0.6rem;
+        border: none;
+        border-bottom: 1px solid var(--text-muted);
+        border-radius: 0;
+        background-color: transparent;
+        color: var(--text-light);
+        font-size: 0.95rem;
+        box-sizing: border-box;
+      }
+      .field textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+
+      /* ラジオ・チェックグループ */
+      .options-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+        margin: 0.4rem 0 1rem;
+      }
+      .options-group label {
+        display: flex;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        cursor: pointer;
+      }
+      .options-group input {
+        margin-right: 0.4rem;
+      }
+
+      /* ロゴタイプ選択肢の画像付きレイアウト */
+      .logo-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .logo-options label {
+        flex: 1 1 calc(33.333% - 1rem);
+        max-width: calc(33.333% - 1rem);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        color: var(--text-muted);
+      }
+      .logo-options label input {
+        margin-bottom: 0.4rem;
+      }
+      .logo-options label img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 8px;
+        margin-bottom: 0.3rem;
+        border: 1px solid var(--bg-main);
+      }
+      .logo-options label span {
+        font-size: 0.8rem;
+        margin-top: 0.2rem;
+      }
+
+      /* フッターナビゲーション */
+      .actions {
+        margin-top: auto;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .actions button {
+        border: 1px solid var(--btn-border);
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .actions .prev-btn,
+      .actions .next-btn {
+        background-color: var(--btn-bg);
+        color: var(--btn-color);
+      }
+      .actions .prev-btn:hover,
+      .actions .next-btn:hover {
+        background-color: var(--highlight);
+        color: var(--bg-panel);
+      }
+      .actions .clear-btn {
+        background-color: transparent;
+        border: 1px solid var(--clear-border);
+        color: var(--clear-color);
+        /* クリアボタンをフォーム右端に配置するため左側に自動マージンを追加 */
+        margin-left: auto;
+      }
+      .actions .clear-btn:hover {
+        background-color: var(--clear-color);
+        color: var(--bg-panel);
+      }
+
+      /* バリデーションエラーメッセージ */
+      .error {
+        color: var(--highlight);
+        font-size: 0.75rem;
+        margin-top: 0.2rem;
+      }
+
+      /* 補足説明テキスト */
+      .note {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        /* 項目名よりもさらに明度を落として目立ちにくくする */
+        opacity: 0.6;
+        margin-top: 0.2rem;
+        line-height: 1.3;
+      }
+
+      /* フォーム本体とステップバーを同じ幅にするラッパー */
+      .form-wrapper {
+        max-width: 600px;
+        width: 100%;
+      }
+
+      /* 確認モーダル */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--modal-overlay);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      .modal.hidden {
+        display: none;
+      }
+      .modal-content {
+        background-color: var(--modal-bg);
+        color: var(--text-light);
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        max-width: 380px;
+        width: 90%;
+        text-align: center;
+      }
+      .modal-actions {
+        margin-top: 1.2rem;
+        display: flex;
+        justify-content: center;
+        gap: 0.8rem;
+      }
+      .modal-btn {
+        border: 1px solid var(--btn-border);
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        background-color: var(--modal-btn-bg);
+        color: var(--modal-btn-color);
+      }
+      .modal-btn:hover {
+        background-color: var(--modal-btn-hover);
+        color: var(--bg-panel);
+      }
+
+      /* 確認モーダル内ボタンのカスタム */
+      .modal-btn.confirm {
+        background-color: var(--highlight);
+        border-color: var(--highlight);
+        color: var(--bg-panel);
+      }
+      .modal-btn.confirm:hover {
+        background-color: var(--modal-btn-bg);
+        color: var(--btn-color);
+      }
+      .modal-btn.cancel {
+        background-color: transparent;
+        border-color: var(--clear-border);
+        color: var(--clear-color);
+      }
+      .modal-btn.cancel:hover {
+        background-color: var(--clear-color);
+        color: var(--bg-panel);
+      }
+
+      /* 共通で要素を非表示にするユーティリティクラス */
+      .hidden {
+        display: none !important;
+      }
+
+      /* サンクス画面のスタイル */
+      .thank-you {
+        display: none;
+        /* サンクス画面を画面全体に表示するため位置を固定 */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-light);
+        background-color: var(--bg-panel);
+      }
+      .thank-you h2 {
+        margin: 0 0 1rem 0;
+        font-size: 1.6rem;
+        font-weight: 600;
+      }
+      .thank-you p {
+        font-size: 0.95rem;
+        color: var(--text-muted);
+      }
+
+      /* サンクス画面のタイトルを大きく表示。PCは120px相当、スマホは60px相当 */
+      .thank-you .thank-title {
+        font-weight: 700;
+        font-size: 7.5rem;
+        line-height: 1;
+        margin-bottom: 1rem;
+      }
+      @media (max-width: 768px) {
+        .thank-you .thank-title {
+          font-size: 3.75rem;
+        }
+      }
+      /* トップに戻るボタン */
+      .return-btn {
+        margin-top: 2rem;
+        padding: 0.6rem 1.2rem;
+        border: 1px solid var(--btn-border);
+        background-color: var(--btn-bg);
+        color: var(--btn-color);
+        border-radius: 4px;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      .return-btn:hover {
+        background-color: var(--highlight);
+        color: var(--bg-panel);
+      }
+
+      @media (max-width: 768px) {
+        .wrapper {
+          flex-direction: column;
+        }
+        .sidebar {
+          width: 100%;
+          align-items: center;
+          text-align: center;
+        }
+        .main {
+          /* モバイルでも余裕のある余白を確保 */
+          padding: 2rem 2rem 4rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <aside class="sidebar">
+        <!-- サイドバーのタイトルを縦に見せるため、改行タグを使用 -->
+        <h1>Branding<br>&amp; Design<br>Questionnaire</h1>
+      </aside>
+      <main class="main">
+        <div class="form-wrapper">
+          <div class="progress">
+          <ul id="progress-indicator">
+            <li class=""></li>
+            <li class=""></li>
+            <li class=""></li>
+            <li class=""></li>
+            <li class="active"></li>
+          </ul>
+        </div>
+        <form id="wizard-form">
+        <!-- STEP 1: 基本情報 -->
+          <div class="step" data-step="0">
+            <h2>STEP 1</h2>
+            <div class="field">
+              <label>お名前</label>
+              <input type="text" name="full_name">
+            </div>
+            <div class="field">
+              <label>メールアドレス</label>
+              <input type="email" name="email">
+            </div>
+            <div class="field">
+              <label>メールアドレス（確認用）</label>
+              <input type="email" name="email_confirm">
+            </div>
+            <div class="field">
+              <label>電話番号（任意）</label>
+              <input type="tel" name="phone">
+            </div>
+            <div class="actions">
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 2: ロゴ詳細 -->
+          <div class="step" data-step="1">
+            <h2>STEP 2</h2>
+            <div class="field">
+              <label>ビジネス名（ロゴに表示する）</label>
+              <input type="text" name="business_name">
+              <div class="note">会社名やサービス名など、ロゴに表示する名称</div>
+            </div>
+            <div class="field">
+              <label>タグライン（任意）</label>
+              <input type="text" name="tagline">
+              <div class="note">企業や商品の価値や想いを端的に伝える短いフレーズ（例: Just&nbsp;Do&nbsp;It.）</div>
+            </div>
+            <div class="field">
+              <label>既存のロゴはありますか？</label>
+              <div class="options-group">
+                <label><input type="radio" name="current_logo" value="yes">はい</label>
+                <label><input type="radio" name="current_logo" value="no">いいえ</label>
+              </div>
+              <div class="note">既にロゴがある場合は「はい」を選択してください</div>
+            </div>
+            <div class="field">
+              <label>既存ロゴの好きな点・嫌いな点（任意）</label>
+              <textarea name="current_logo_feedback"></textarea>
+              <div class="note">色・形・フォントなど、好きな点や改善したい点があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 3: 企業情報 -->
+          <div class="step" data-step="2">
+            <h2>STEP 3</h2>
+            <div class="field">
+              <label>提供サービス・製品</label>
+              <textarea name="services"></textarea>
+              <div class="note">提供している商品やサービスの内容を具体的に記入してください</div>
+            </div>
+            <div class="field">
+              <label>ターゲット顧客層</label>
+              <textarea name="target_audience"></textarea>
+              <div class="note">性別・年齢・職業・趣味など、主な客層をできるだけ具体的に記入してください</div>
+            </div>
+            <div class="field">
+              <label>伝えたいメッセージ/理念（任意）</label>
+              <textarea name="message"></textarea>
+              <div class="note">ロゴを通じて伝えたい価値観やビジョンを記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 4: デザインの好み -->
+          <div class="step" data-step="3">
+            <h2>STEP 4</h2>
+            <div class="field">
+              <label>希望するロゴタイプ</label>
+              <!-- 画像サンプル付きのロゴタイプ選択肢 -->
+              <div class="options-group logo-options">
+                <label>
+                  <input type="radio" name="logo_type" value="lettermark">
+                  <!-- 直接base64埋め込みで画像を表示 -->
+                  <img src="data:image/png;base64,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" alt="レターマーク サンプル">
+                  <span>レターマーク</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="wordmark">
+                  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAFQklEQVR42t1YTWhcVRQ+59773sy0SSaTpvmbNLZpU5LUUKmFoovWHyiVotKNCIKI4KKiICIuqiuXrtzoTlBB6a5LoSCC6KIK/UmNv2nSJJOa5rfJJJmZd3+Oi7ymM5n37nuTpFp9i+G9N+fc952f75xzLzb39ELYhQAEtV0IALVrlakzf4kNi+JmV6QYaLDqvuwNAwqSqNUlkTIYIk8b37ONHqYq7FtxWPWaFGESi17FnhNUC1wKUaF7f7Hoz1CQNVjmQooRLwrP+kp1EexALMOElcYFoqRwZGRlIm70AovWp3i0os3SkCp+WbRNWCPLMB7jsMrBtpBBVQ5hOFkwKJpYFRQLv8ogRoWMogJH1kBjeJioKrUpjPYUg+oW07HGwl3pZnHPCAyhm6XeYOzEitMPcL11rJM2zLHlrKYg06nKu3HYGvQ5FrAiBbSY0PJjKVFUGV+stDDkYtHMxCDKYHCvtj1S5eIUNn5AvEqIITlbExsCUUa0jjgkr6mOB2Z3eHFh1nGRyJNgyPezMeRJIP+RlCapaqA0AhgiT4GxGREKiJRxulvTb54SXbtAG1La7cs2vH6SN9eTNqT0zlOPpM+eZDtcIIoz0ZIyYt/uxrdPi/YMGVMzIAAAbVKnjyQf6yGlQZvkUw/vfPFxd6ALpGauk3r+qHOok4pyzW7yFGj/MyQ1GENKk9R3Xauo6PHdDclnDmPjDouTRKhtDNXkvBqddga6kHNMCOdgG5WU098JX1/l7Y28vXH1wk8mX+DtGXdgD7pC/jopJ+ZZynH6s2Zqkbc0AMPS1THRmnYH9ug7q+hyKkq0hkyEextNwZNDucTxXpZOsV31rCWtR247vR2YdJwDbegK7/KI25dNv3eG1afIGERc+vhi6fJo4zvPUr7AOzKFi4N6Np/54AW2q45WilRSoIw935h9TvAGx1hDytnb4h7qBE+tXviRt6Wdh5qd/qyZzavxubrXngZt5t/6fO7sp3J4qu7VJ3jjTlIaBF84d375qx/qXzmB9ck7587PvfGZmpgDh9tbjS2HkDP555RZLrlHuxNH9qmR6eKlG1TwEscOOD1t8rdJABD7dpcuDcuxWT29VPz2F9ZUx9vSa5YUr4yCMaIvK6+Nla6P65ml4jc/A0OyVgdrUjOmZ/N6eCp5vM/p7/Su3NQzS/KPv1InD/OOJm9w3M9iztasxLUbQ0BAnkbBAREIiAgQAYG0iSyb1o0iAknlDeVYcz0w9K6PA4AcHGetaQCQv98yy0U9MZc4dkBkm3h6R+LJfrOwom8vImegDSCa5aIanXYHutyD7awhlTrRFzlRitBiepdscigHhnRuXuXm0RHeUI48ZaYX1a0FIlr+4rv0u881ffQySI11yfwnF83CMjDmFydDK19+n37/TObDlyhfMAUPpLIjwuaDvbbhkgBd7uxvM0urKjcPiMiZs7+VSlLenAGGILVozySOdoPDvWtj8sZtTAixt8UsruqZJV+gI+M+2k35gnd9gmcz6uaMWSkBYkD9RMDmnt7QHYwvR6QMIoLwt7mkNCCiYOv1k5QBIOAMBV8TQIZ+bvkCGgBRMNKEglWgqRzSxcaNWMDoiLjOVQIA8B/XJRlDl1VYKSrkgTPkzNflER1XBAx+kfMDWbfbFE8sZE22yQON+3ax0I09bge+2nVjDGi0BUC0LR6CBy1k4edt/zYg2nLI4L8fMmE7QbJviaiWw2S0ypexW9g4hZviDtWoUnlOwraXtFsvEA8g7TfHarx/gGhLHv7/0/4fAYQx2gDGbx3bx6DgNlB51P83xLp/BO8WmJ0AAAAASUVORK5CYII=" alt="ワードマーク サンプル">
+                  <span>ワードマーク</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="brandmark">
+                  <img src="data:image/png;base64,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" alt="ブランドマーク サンプル">
+                  <span>ブランドマーク</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="combination">
+                  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAENklEQVR42u2ZzU8bRxTA38zOrMFAMSYBYgKKQ3AJIVJAaqRA09yq5JAQ0eRWWvohoSBaKf9Gm6p/Q1B77QeXnijpF5RGqqoEEWPkyJgIB2zs2tjeXc/H68FB0GI+IiVtD/sOq7czb2Z+mjdv5s0uCXZ2AQFA2H5WFASALRvYoZMdVTuNd/e202x3J1uF7NkL2dXpP4TsUvZpVbGcHKQTAAAK/zNxgVwgF8gFcoFcIBfoBQv7NwZBQIXldIcQAIPsk+e8fCCFwIjZWcPaPAAgVxwRLYJEMMh/AaSQ+njtjSazy4sSAQEpiEix8FVSZ0RFJqOh8cjL8xTh9JXhY/yU15pKFyZT9v0c2OjprWMBjzNfAFUh23zxM4SIgEAoAYlmXx0PeQvfJotTacIIIBSWbXR09Zt+T0+tcz8HnBw2ypRSiAiISimtNQDocslBwhn31njLutnp1Tnp/L5JOAWDACOEgM5IAGDB6sOGvVKq9fjxsY/G6+vrTY9n9Nat093djuMMDg1dvnJFCimllEKU4cq4SsqybhWLp890j42PM4MhIJgESxoFll2DEj0XfDVvHVUp4fyWBeNwQISQzVwuFHq1ra09EAj0Dwz09vZ5PJ4L/f22bQPAmZ6ec319pmkCQHt7u9/v7+js1FoHAq2vnT/v9/tr6+rKa0itlaiPGU0cJILC6td9tTePyqel/N2EjNlAyaGijFKayWSWY7GTHScdx8lkMm3tbcFgkHO+GA6/895IZyikpEyn019MTHw4OkopTayuTk99P/LB+8n1dV9DQ5kbKDh/5Ksu+ryXGzfvJtDSakOIx7aIFNWG2L169osyKWVDg7/n7Nnm5ua52dljgYC/sZEARBYXr12//vmdO/emp68OXkulUl1dXb/OzHw5MTF080Yqmfzsk09N0zwRDP70w48atM4qKGHVRZ/R5BHhgkoJHqqp6q9XTxy1Vqo4Q5UXtUFpOPwo0Nra0tIyNze3vr7ePzCwFIlIqQDAtm3bsqSUnHOt9eNo1HFKjDHHcYQoFQuF7asfI/bPfxYnU2ZPTe3bLXXDLea5WvteRixZz7cxUsN4upoo5PNFy1pLJJYikTcuXXocjcbjy/F4fHRszLasfD4ffhS+OjjIOCeUzP4yMzzy7se3b3ec6tAaty+jBrGmMyjQO3gEKFjfbVhTaaB7nh6VXUYIUVImk8n5Bw+TqWQum32ysrKwsOA4zvyDh4i4sbEx+fU3uVw2l83GYjFRKiUSiZV43GBsdmYmurSUSCS2mSiRMVvnlYza9nRm/7OMBENde9VJIYEAZ0xrLaTknBNCUKOUAgEYY5RSIYRhGJTS8srTWlNCEIBzXuFQA9jLU4faqRlnz75kUFoOcgAglPAtHf4+MGP77vsHobgJmgvkArlALpAL5AK5QC5QGQh3/CzCwzV6LnvcQ9/D+C+fywakCFEgPAAAAABJRU5ErkJggg==" alt="コンビネーション サンプル">
+                  <span>コンビネーション</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="emblem">
+                  <img src="data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAAHvElEQVR42rVZ6W9cSRGv6n5vPPeb+/AxPiY+4rWTrJLFLBs22giRFQtfFiGEVgiExL/EV/YTHxYhoRWgFbALKwtBQgjehMTBduL4tmc8HnvueUcXH+a+D4fWaOZN93vd1dVVv6r6PQxNRgEBCABLXx1adYwAoMt9l22sNDUBEAFQebl6Mco9WOupHx2+UfNUVBao0hAAsM3OsX5xAsSWoS5K7dKw4YbqVKx6AoRtJsGmK+yorfZLDi4ta5CXAGmA5y9pSIgdBKLOw69r7dZdYclqG4cIgNWbCOL/0X2adkXtdoklDZXMmS7nNchQGDTEFNTehgCG1w6BVjAW707c+jBKNIC2mvwEmwQaogmdDJ24zAJXlNCcKzzvDkQVQ78UPEllpVEPo25thibCC+6ZlZDZLgtdfPX7V5EbvkBUOXqeBI5D26LUEBb6l0an5fcn/dPO9b/sJ/ezal4TBgHCwp2xG9+bfvyHV0waUiJud3lwwP0Ympi+FQzNuVZ/+SwVywtByJBxlo4X9tZOZ98JSyae2E0zPoxMbAgTlkekmZXgvz/dFjpxmVXOmriMBLT2u+2pmwHZLBEN424DCyQEKaPWYlZLxXIA8LUfzF7/YNrQhKGJa+9Pvv3R/MVxrpBRXWErCRoCpQYXyCBvxJFLFqmMpcgYCEG6JgCRMSSiTKLgm3IKoyYQidKHDF30tqEBtCrA5h5Zvjf5nz/taXmNcdx7fHq0ngzMOOfeGX32573dtVMuYfZMXbw7Ht9OqTmDBOmqCF5x3fowerJ5EZx1peOFLh5dFoioJbC3Bx4RuebTVePlgxMuMyKYWPYV0ioRIGIqlrM4ZEMTufOi3TNidphiL1Lz745Grvv9007/jHN00TOx7N37KqEVjU4ysVrgxb5wXwhi1QBokGzmt39y1T+jCIPe/mh+fMlXAkZu4iQICLwTDveYzeI0Pf/rQfokN2KT7/x80WTmJDrhENVyJewV1hlnJ5vn0ZWge8yeiueYhC/uHyf3M2NLXiVo2X5wcrRxjgjeiMMbcfz3ywNAEAY9/Xz//CCj5nWb25w8zIYX3LomOi0kUVWOPuBRCCpmtWJW/+ZPr37+i8fFrM4lljzMJvYyAMAYIEObe+QbP57PX6g2j9nsNClBSy5Z0IoG45hNFnxTjlcPY3rR4HJ7f8LQVLRPi9ZVEYgqN747ldhJb/7tKHdR7JR3jVil8II7NOuSLXx37XT7YQwZcond+n5UzemPfvuyC473K5Cuipm3gnO3w48+3Y5tXXAZkXWuUAgMVSADZEgEXEK9KJbvRSwu0z9/vcUl1uUoWH+xgsaXPHO3w6sfr8dfXpT8q3tTQlaTRUKGXEISYLJK4QXX+hf7yHrEqd4CEcGIXVr6duTBJ1u58yLjaPeZp24G6nGvFR18087Fu+NCFyUwvP7B5MmLVCZR6BngWJ+h9GTrIrGf5jITgt741oShGm2UVOnhEttdi3siDrvXbLLKX//RrGyWnv5xl0m9l5N6h1+OwSvKk892uMSEQf5pxWSV9p4kuIQdc2YErWAcPjt792eLWsE4eJp4/uUhYF8pl9T7vGwyckyfFpCh0MTMW4GdR3ESBF2VzxgmD7PFrLb68bqa07sb8iBHRmSySEIXhiaAwKKY7D7L4XqS91Q+gpbXCxlNzelcZv0nXH14GTZcM45mh0x9JDvIEQhwwNS450ZRLxpcYohARGreePWv2MKdsS4uVj1ri8NUzGliwKyI1cgHgtZtI0AhowmDQgtus11evhdZeG9ctvCe9kmClLA1Fct3kbihcqVGo66SDa0SGao43jxfvhdJ7KZJkJbXTzYugHpEPsbQM25f/+KgBjyNT2Aj84RYlqmuUKT2K3CZvbx/ko7nx5e8rlHb0fOkbOZNuhQGNeWHFsVkssoXsVw1V2niX5orxUoKVHN7wubaGyv3Gbr4+682ZDMnAaFZJRBVmpDz6nvjal5/8Y/jUgwXgtyjttx5UcvrDVEda1RV65kTAWKV/aBmOgIbeRME0AqGmtPyaU22StXpiMBkkaZuBibf9JfcqmRAnglHcj9DHfg2bLQhqixNVEc29GBkEBABGRbSqmTi1VAvDPJNOePbqWJWsykjlcwf7D5zYjeN2I4yw8psdYlhmXjBqg2VCEYqM43tKSoCIBhb9LC6xIMEBaLK8UYyd646ApZK6YPIMPKm32SV2xRDdWtRvfoIkFpwCFt4u/ryef7OmGfCcf+TTRIkDBI6AYAzYEkeZLNnBSVk1VVDGARID3+zVUipKz+cZRJr3mHFnMu/VHddM2rsQZMRAeM4vuzdWD20KiMOr7l0Og6/xWSV8xfF5EHm+nemzvazZAgCIEGHz5Njb3gcfsv5YZZ1oh+w+Vqqd6ou2IIIQtDG6sHENV+ZQCYq2dCTz3aIILGX2VmLR1eCiECAQIQIB8/O0vE8a5tbYmPtVfGycgpb+tNWoPpOoRPVT0NlzTGOQFCrSrEhN2q7yyb+vUoJSdCL8awfYVJnng2hUyHRZ2HfSDZcivV6Hcw+lb8koNcjTPPLkLa8K7a8VEBoIsoZNb5UoOE00erYbVGsYjhVcKkH61J/OQhgPVV9SQa6A4w1oXZT2Y7VBLAWRxrzko5aoc6jPaluasa2VgT/HyCPwK0vCRDtAAAAAElFTSuQmCC" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.length - 1) {
+                current++;
+                showStep(current);
+              }
+            }
+          }
+        });
+        // 前へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('prev-btn')) {
+            e.preventDefault();
+            if (current > 0) {
+              current--;
+              showStep(current);
+            }
+          }
+        });
+        // クリアボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('clear-btn')) {
+            e.preventDefault();
+            // 確認モーダルを表示
+            showModal();
+          }
+        });
+        // モーダル内のボタン操作
+        modalConfirm.addEventListener('click', function () {
+          // フォームをリセットし最初のステップへ
+          form.reset();
+          current = 0;
+          hideModal();
+          showStep(current);
+        });
+        modalCancel.addEventListener('click', function () {
+          hideModal();
+        });
+        // フォーム送信時
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          
+          // フォームデータを収集
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData);
+          
+          // EmailJSを使用してメール送信
+          emailjs.send('service_id', 'template_id', {
+            to_email: 'matsuhashi@tembin.jp',
+            from_name: data.full_name,
+            from_email: data.email,
+            business_name: data.business_name,
+            services: data.services,
+            target_audience: data.target_audience,
+            logo_type: data.logo_type,
+            color_preferences: data.color_preferences,
+            additional_info: data.additional_info,
+            extra_services: data.extra_services,
+            message: `新しいお問い合わせがありました。
+            
+お名前: ${data.full_name}
+メールアドレス: ${data.email}
+電話番号: ${data.phone || '未入力'}
+
+ビジネス名: ${data.business_name}
+タグライン: ${data.tagline || '未入力'}
+
+提供サービス: ${data.services}
+ターゲット顧客層: ${data.target_audience}
+伝えたいメッセージ: ${data.message || '未入力'}
+
+ロゴタイプ: ${data.logo_type || '未選択'}
+色の好み: ${data.color_preferences || '未入力'}
+
+追加情報: ${data.additional_info || '未入力'}
+追加サービス: ${data.extra_services || 'なし'}`
+          })
+          .then(function(response) {
+            console.log('SUCCESS!', response.status, response.text);
+            // サンクス画面を表示
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            if (formWrapperDiv) formWrapperDiv.style.display = 'none';
+            thankYou.style.display = 'flex';
+          })
+          .catch(function(error) {
+            console.log('FAILED...', error);
+            alert('送信に失敗しました。もう一度お試しください。');
+          });
+        });
+
+        // トップに戻るボタンの処理
+        const returnBtn = document.getElementById('return-btn');
+        if (returnBtn) {
+          returnBtn.addEventListener('click', function () {
+            const thankYou = document.getElementById('thank-you');
+            const formWrapperDiv = document.querySelector('.form-wrapper');
+            // サンクス画面を非表示にしフォームを再表示
+            thankYou.style.display = 'none';
+            if (formWrapperDiv) formWrapperDiv.style.display = '';
+            // フォームをリセットして最初のステップへ
+            form.reset();
+            current = 0;
+            showStep(current);
+          });
+        }
+        showStep(current);
+
+        // --- エンブレムサンプル画像を修正 ---
+        // 既存のエンブレム画像の base64 データが破損しているため、アップロードされた emblem.png を縮小して Base64 に変換したデータをここで設定する。
+        // 最新のエンブレム画像をBase64形式に変換したデータに差し替え
+        const emblemBase64 = 'data:image/png;base64,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" alt="エンブレム サンプル">
+                  <span>エンブレム</span>
+                </label>
+                <label>
+                  <input type="radio" name="logo_type" value="mascot">
+                  <img src="data:image/png;base64,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" alt="マスコット サンプル">
+                  <span>マスコット</span>
+                </label>
+              </div>
+              <div class="note">ロゴの形式を選択します（頭文字のみ、文字だけ、マークのみ、文字＋マーク、エンブレム、キャラクター）</div>
+            </div>
+            <!-- ブランディングの雰囲気をペアごとに分けて分かりやすく表示 -->
+            <!-- ブランディングの雰囲気選択フィールドはユーザーの要望により削除しました -->
+            <div class="field">
+              <label>好き・避けたい色（任意）</label>
+              <textarea name="color_preferences"></textarea>
+              <div class="note">使用したい色や避けたい色があれば記入してください</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="button" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+          <!-- STEP 5: その他情報 / 確認 -->
+          <div class="step active" data-step="4">
+            <h2>確認</h2>
+            <div id="summary" style="margin-bottom: 1rem;"><div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>お名前</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">てすと</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>メールアドレス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">matsuhashi@tembin.jp</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>ビジネス名</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">Sanosuke</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>提供サービス</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">っっf</div>
+                      </div><div class="field" style="margin-bottom:0.8rem;">
+                        <label>好きな色</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;"></div>
+                      </div></div>
+            <div class="field">
+              <!-- 「競合他社とサイトURL」フィールドは削除 -->
+            </div>
+            <div class="field">
+              <label>追加情報（任意）</label>
+              <textarea name="additional_info"></textarea>
+              <div class="note">その他、補足やデザインの要望があれば記入してください</div>
+            </div>
+            <div class="field">
+              <label>その他のデザイン希望（任意）</label>
+              <div class="options-group">
+                <label><input type="checkbox" name="extra_services" value="business_card">名刺デザイン</label>
+                <label><input type="checkbox" name="extra_services" value="letterhead">レターヘッド</label>
+                <label><input type="checkbox" name="extra_services" value="envelope">封筒</label>
+                <label><input type="checkbox" name="extra_services" value="brochure">パンフレット</label>
+                <label><input type="checkbox" name="extra_services" value="flyer">フライヤー</label>
+                <label><input type="checkbox" name="extra_services" value="website">WEBサイト</label>
+              </div>
+            </div>
+            <div class="actions">
+              <button type="button" class="prev-btn" style="visibility: visible;">前へ</button>
+              <button type="submit" class="next-btn">送信</button>
+              <button type="button" class="clear-btn">クリア</button>
+            </div>
+          </div>
+        </form></div>
+        
+      </main>
+    </div>
+    <!-- クリアボタン用確認モーダル -->
+    <div id="confirm-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>フォームの内容をすべてクリアしますか？</p>
+        <div class="modal-actions">
+          <button type="button" id="modal-confirm" class="modal-btn confirm">はい</button>
+          <button type="button" id="modal-cancel" class="modal-btn cancel">いいえ</button>
+        </div>
+      </div>
+    </div>
+    <!-- 送信後に表示されるサンクス画面 -->
+    <div id="thank-you" class="thank-you">
+      <!-- PCでは約120px、スマホでは約60pxの大きさになるようにする -->
+      <div class="thank-title">Thank you!</div>
+      <p>お問い合わせいただきありがとうございます。内容を確認のうえ、３営業日以内にご連絡いたします。</p>
+      <button type="button" id="return-btn" class="return-btn">トップに戻る</button>
+    </div>
+    <script>
+      // ウィザードのステップ管理
+      document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('wizard-form');
+        const steps = Array.from(form.querySelectorAll('.step'));
+        const progressItems = Array.from(document.querySelectorAll('#progress-indicator li'));
+        // モーダル要素
+        const modal = document.getElementById('confirm-modal');
+        const modalConfirm = document.getElementById('modal-confirm');
+        const modalCancel = document.getElementById('modal-cancel');
+        let current = 0;
+
+        // モーダル制御関数
+        function showModal() {
+          modal.classList.remove('hidden');
+        }
+        function hideModal() {
+          modal.classList.add('hidden');
+        }
+
+        function showStep(index) {
+          steps.forEach((step, i) => {
+            step.classList.toggle('active', i === index);
+          });
+          progressItems.forEach((li, i) => {
+            li.classList.toggle('active', i === index);
+          });
+          // ボタン表示制御
+          steps.forEach((step, i) => {
+            const prevBtn = step.querySelector('.prev-btn');
+            const nextBtn = step.querySelector('.next-btn');
+            if (prevBtn) {
+              prevBtn.style.visibility = index === 0 ? 'hidden' : 'visible';
+            }
+            if (nextBtn) {
+              // 最終ステップでは「送信」と表示
+              if (index === steps.length - 1) {
+                nextBtn.textContent = '送信';
+              } else {
+                nextBtn.textContent = '次へ';
+              }
+            }
+          });
+          // サマリー更新
+          if (index === steps.length - 1) {
+            updateSummary();
+          }
+        }
+
+        function updateSummary() {
+          const summaryContainer = document.getElementById('summary');
+          const formData = new FormData(form);
+          let html = '';
+          // 表示する主要項目をまとめる
+          const fieldsToSummarize = [
+            { label: 'お名前', value: formData.get('full_name') || '' },
+            { label: 'メールアドレス', value: formData.get('email') || '' },
+            { label: 'ビジネス名', value: formData.get('business_name') || '' },
+            { label: '提供サービス', value: formData.get('services') || '' },
+            { label: '好きな色', value: formData.get('color_preferences') || '' }
+          ];
+          html += '<div style="margin-bottom:1rem;">ご入力内容をご確認ください。</div>';
+          fieldsToSummarize.forEach(item => {
+            html += `<div class="field" style="margin-bottom:0.8rem;">
+                        <label>${item.label}</label>
+                        <div style="border-bottom:1px solid var(--text-muted);padding:0.3rem 0;">${item.value.replace(/\n/g,'<br>')}</div>
+                      </div>`;
+          });
+          summaryContainer.innerHTML = html;
+        }
+
+        // バリデーション関数
+        function validateStep(index) {
+          const step = steps[index];
+          // 既存のエラーメッセージを削除
+          step.querySelectorAll('.error').forEach((el) => el.remove());
+          let valid = true;
+          // ヘルパー関数
+          const showError = (element, message) => {
+            valid = false;
+            const container = element.closest('.field') || element;
+            const err = document.createElement('div');
+            err.className = 'error';
+            err.textContent = message;
+            container.appendChild(err);
+          };
+          if (index === 0) {
+            const fullName = step.querySelector('input[name="full_name"]');
+            const email = step.querySelector('input[name="email"]');
+            const emailConfirm = step.querySelector('input[name="email_confirm"]');
+            if (!fullName.value.trim()) showError(fullName, 'お名前を入力してください');
+            const emailPattern = /^[\w.+-]+@[\w-]+\.[\w.-]+$/;
+            if (!email.value.trim()) showError(email, 'メールアドレスを入力してください');
+            else if (!emailPattern.test(email.value)) showError(email, '正しいメールアドレスを入力してください');
+            if (!emailConfirm.value.trim()) showError(emailConfirm, '確認用メールアドレスを入力してください');
+            else if (emailConfirm.value !== email.value) showError(emailConfirm, 'メールアドレスが一致しません');
+          } else if (index === 1) {
+            const businessName = step.querySelector('input[name="business_name"]');
+            if (!businessName.value.trim()) showError(businessName, 'ビジネス名を入力してください');
+          } else if (index === 2) {
+            const services = step.querySelector('textarea[name="services"]');
+            const target = step.querySelector('textarea[name="target_audience"]');
+            if (!services.value.trim()) showError(services, '提供サービスを入力してください');
+            if (!target.value.trim()) showError(target, 'ターゲット顧客層を入力してください');
+          } else if (index === 3) {
+            const logoType = step.querySelectorAll('input[name="logo_type"]:checked');
+            if (logoType.length === 0) showError(step.querySelector('input[name="logo_type"]'), 'ロゴタイプを選択してください');
+            // ブランディングの雰囲気の選択肢は撤廃されたため、追加のバリデーションは不要です
+          }
+          return valid;
+        }
+
+        // 次へボタン
+        form.addEventListener('click', function (e) {
+          if (e.target.classList.contains('next-btn') && e.target.type !== 'submit') {
+            e.preventDefault();
+            // 現在のステップを検証
+            if (validateStep(current)) {
+              if (current < steps.

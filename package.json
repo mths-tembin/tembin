@@ -1,0 +1,17 @@
+{
+  "name": "tembin-portfolio",
+  "version": "1.0.0",
+  "description": "Tembin Portfolio Website",
+  "main": "index.js",
+  "scripts": {
+    "dev": "live-server --port=3000",
+    "build": "echo 'Build completed'",
+    "start": "live-server --port=3000"
+  },
+  "keywords": ["portfolio", "design", "web"],
+  "author": "Tembin",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
